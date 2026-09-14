@@ -217,6 +217,21 @@
           <option value="Rechazada">Rechazada</option>
         </select>
         <select id="solDespachoFilter"><option value="todos">Todos los despachos</option></select>
+        <select id="solMesFilter">
+          <option value="todos">Todos los meses</option>
+          <option value="01">Enero</option>
+          <option value="02">Febrero</option>
+          <option value="03">Marzo</option>
+          <option value="04">Abril</option>
+          <option value="05">Mayo</option>
+          <option value="06">Junio</option>
+          <option value="07">Julio</option>
+          <option value="08">Agosto</option>
+          <option value="09">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+          <option value="12">Diciembre</option>
+        </select>
       </div>
       <button class="btn" id="addSolBtn">+ Nueva solicitud</button>
     </div>
@@ -970,6 +985,7 @@ function renderSolicitudes(){
   const search = document.getElementById('solSearch').value.trim().toLowerCase();
   const estadoF = document.getElementById('solEstadoFilter').value;
   const despF = document.getElementById('solDespachoFilter').value;
+  const mesF = document.getElementById('solMesFilter').value;
   const restrict = teamRestriction();
   const tbody = document.getElementById('solTbody');
   tbody.innerHTML = '';
@@ -978,11 +994,12 @@ function renderSolicitudes(){
     const emp = findEmp(s.emp_id);
     const despachoActual = emp ? emp.despacho : s.despacho;
     if(despF!=='todos' && despachoActual!==despF) return false;
+    if(mesF!=='todos' && !(s.f_inicio && s.f_inicio.slice(5,7)===mesF)) return false;
     if(search && !((emp ? emp.nombre : s.nombre)||'').toLowerCase().includes(search)) return false;
     if(restrict){ if(!emp || emp.team !== restrict) return false; }
     return true;
   });
-  list.sort((a,b)=>(b.f_inicio||'').localeCompare(a.f_inicio||''));
+  list.sort((a,b)=>(a.f_inicio||'').localeCompare(b.f_inicio||''));
   document.getElementById('solEmpty').style.display = list.length ? 'none':'block';
   list.forEach(s=>{
     const emp = findEmp(s.emp_id);
@@ -1006,7 +1023,7 @@ function renderSolicitudes(){
     tbody.appendChild(tr);
   });
 }
-['solSearch','solEstadoFilter','solDespachoFilter'].forEach(id=>document.getElementById(id).addEventListener('input', renderSolicitudes));
+['solSearch','solEstadoFilter','solDespachoFilter','solMesFilter'].forEach(id=>document.getElementById(id).addEventListener('input', renderSolicitudes));
 
 async function quickEstado(id, estado){
   if(!canEdit()) return;
