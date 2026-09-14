@@ -303,7 +303,7 @@
         <div class="field">
           <label>Días correspondientes</label>
           <input type="number" id="empDias" min="0" step="0.5" required>
-          <div class="hint">Se sugiere solo al poner F. incorporación o F. baja (departamentos con convenio de 23 días laborables) — puedes ajustarlo a mano.</div>
+          <div class="hint">Se sugiere solo al poner F. incorporación, F. baja o el modelo de días (23 días/año en laborables, 30 en naturales) — puedes ajustarlo a mano.</div>
         </div>
         <div class="field">
           <label>¿Cómo se cuentan sus días?</label>
@@ -594,7 +594,8 @@ function diasSolic(s){
   const conteo = emp ? emp.conteo : 'laborables';
   return conteo === 'naturales' ? naturalDaysBetween(s.f_inicio, s.f_fin) : businessDaysBetween(s.f_inicio, s.f_fin);
 }
-function calcDiasCorresp(fincStr, bajaStr){
+const DIAS_ANUALES_NATURALES = 30; // referencia usada en departamentos con días naturales (ej. ESF)
+function calcDiasCorresp(fincStr, bajaStr, conteo){
   const today = new Date();
   let year = today.getFullYear();
   const finc = fincStr ? parseISO(fincStr) : null;
@@ -611,7 +612,8 @@ function calcDiasCorresp(fincStr, bajaStr){
   const totalDays = daysBetweenInclusive(jan1, dec31);
   const workedDays = daysBetweenInclusive(start, end);
   const ratio = Math.max(0, Math.min(1, workedDays / totalDays));
-  return Math.round(DIAS_ANUALES_CONVENIO * ratio);
+  const base = conteo === 'naturales' ? DIAS_ANUALES_NATURALES : DIAS_ANUALES_CONVENIO;
+  return Math.round(base * ratio);
 }
 function firstName(fullName){
   const parts = (fullName||'').split(',');
@@ -864,14 +866,15 @@ function openEmpModal(id){
 document.getElementById('addEmpBtn').addEventListener('click', ()=>openEmpModal(null));
 document.getElementById('empCancel').addEventListener('click', ()=>document.getElementById('empOverlay').classList.remove('active'));
 function suggestDiasOnDateChange(){
-  if(!DEPTS_CONVENIO_23.includes(currentDept)) return;
   const finc = document.getElementById('empFinc').value;
   const baja = document.getElementById('empFbaja').value;
+  const conteo = document.getElementById('empConteo').value;
   if(!finc && !baja) return;
-  document.getElementById('empDias').value = calcDiasCorresp(finc, baja);
+  document.getElementById('empDias').value = calcDiasCorresp(finc, baja, conteo);
 }
 document.getElementById('empFinc').addEventListener('change', suggestDiasOnDateChange);
 document.getElementById('empFbaja').addEventListener('change', suggestDiasOnDateChange);
+document.getElementById('empConteo').addEventListener('change', suggestDiasOnDateChange);
 document.getElementById('empForm').addEventListener('submit', e=>e.preventDefault());
 document.getElementById('solForm').addEventListener('submit', e=>e.preventDefault());
 document.getElementById('empSaveBtn').addEventListener('click', async ()=>{
