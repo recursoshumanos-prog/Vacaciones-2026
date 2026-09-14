@@ -94,7 +94,10 @@
   .cal-cell{min-height:132px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 6px 4px;position:relative;background:#fff;}
   .cal-cell.other-month{background:var(--paper);}
   .cal-cell.weekend{background:var(--paper-2);}
+  .cal-cell.festivo{background:#F7DFD3;}
   .cal-dow.weekend{background:#E4DCC5;}
+  .festivo-label{font-size:9.5px;color:var(--brick);font-style:italic;margin-bottom:2px;}
+  .mini-cell.festivo{background:#F7DFD3;}
   .cal-daynum{font-family:'Fraunces', serif;font-size:13px;color:var(--ink-soft);margin-bottom:4px;}
   .cal-cell.today .cal-daynum{color:#fff;background:var(--ink);width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:11.5px;}
   .cal-chips{display:flex;flex-direction:column;gap:2px;}
@@ -172,6 +175,7 @@
       <span>Cada persona tiene su propio color en el calendario.</span>
       <span><span class="legend-dot chip pending" style="background:transparent;border:1px dashed var(--ink-soft);"></span>Pendiente de aprobar</span>
       <span id="legendWeekend" style="display:none;"><span class="legend-dot" style="background:var(--paper-2);border:1px solid var(--line);"></span>Fin de semana</span>
+      <span><span class="legend-dot" style="background:#F7DFD3;border:1px solid var(--brick);"></span>Festivo</span>
     </div>
   </div>
 
@@ -1172,12 +1176,16 @@ function buildFullCalendar(despacho, teamF, opts){
   for(let i=0;i<totalCells;i++){
     const dayNum = i-startOffset+1;
     const dow7 = i % 7; // 5=sábado, 6=domingo
-    const cell = document.createElement('div'); cell.className='cal-cell'+((dow7===5||dow7===6)&&opts.markWeekends?' weekend':'');
+    const esFinde = dow7===5 || dow7===6;
+    const cell = document.createElement('div'); cell.className='cal-cell'+(esFinde && opts.markWeekends?' weekend':'');
     if(dayNum<1 || dayNum>daysInMonth){ cell.classList.add('other-month'); grid.appendChild(cell); continue; }
     const cellDate = new Date(calYear, calMonth, dayNum);
     const cellIso = isoOf(cellDate);
+    const esFestivo = FESTIVOS.has(cellIso);
+    if(esFestivo) cell.classList.add('festivo');
     if(cellIso===todayIso) cell.classList.add('today');
     const dnum = document.createElement('div'); dnum.className='cal-daynum'; dnum.textContent=dayNum; cell.appendChild(dnum);
+    if(esFestivo){ const flabel=document.createElement('div'); flabel.className='festivo-label'; flabel.textContent='Festivo'; cell.appendChild(flabel); }
     const chipsWrap = document.createElement('div'); chipsWrap.className='cal-chips';
     const diaSolicitudes = rel.filter(s=>s.f_inicio && s.f_fin && cellIso>=s.f_inicio && cellIso<=s.f_fin);
     if(calMonth===11 && (dayNum===24 || dayNum===31) && diaSolicitudes.length){
@@ -1189,6 +1197,9 @@ function buildFullCalendar(despacho, teamF, opts){
     } else {
     diaSolicitudes.forEach(s=>{
       const emp = findEmp(s.emp_id);
+      // Quien cuenta sus vacaciones en días laborables no "aparece" en sábados,
+      // domingos ni festivos — esos días no forman parte de su periodo contado.
+      if((!emp || emp.conteo !== 'naturales') && (esFinde || esFestivo)) return;
       const color = empColor(emp);
       const chip = document.createElement('div');
       chip.className = 'chip' + (s.estado==='Pendiente' ? ' pending' : '');
@@ -1217,10 +1228,14 @@ function buildMiniCalendar(despacho, teamF){
   let hasAny = false;
   for(let i=0;i<totalCells;i++){
     const dayNum = i-startOffset+1;
+    const dow7 = i % 7;
+    const esFinde = dow7===5 || dow7===6;
     const cell = document.createElement('div'); cell.className='mini-cell';
     if(dayNum<1 || dayNum>daysInMonth){ cell.classList.add('other-month'); cal.appendChild(cell); continue; }
     const cellDate = new Date(calYear, calMonth, dayNum);
     const cellIso = isoOf(cellDate);
+    const esFestivo = FESTIVOS.has(cellIso);
+    if(esFestivo) cell.classList.add('festivo');
     const dnum = document.createElement('div'); dnum.className='mini-daynum'; dnum.textContent=dayNum;
     if(cellIso===todayIso) dnum.style.fontWeight='700';
     cell.appendChild(dnum);
@@ -1233,8 +1248,9 @@ function buildMiniCalendar(despacho, teamF){
       cell.appendChild(chip);
     } else {
     diaSolicitudes.forEach(s=>{
-      hasAny = true;
       const emp = findEmp(s.emp_id);
+      if((!emp || emp.conteo !== 'naturales') && (esFinde || esFestivo)) return;
+      hasAny = true;
       const c = empColor(emp);
       const chip = document.createElement('div'); chip.className='mini-chip';
       chip.style.background = s.estado==='Pendiente' ? 'transparent' : c+'26';
